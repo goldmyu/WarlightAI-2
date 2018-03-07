@@ -21,16 +21,24 @@ public class SmartBotStarter implements Bot {
     }
 
 
+
+
+
+
+
     @Override
     public Region getStartingRegion(BotState state, Long timeOut) {
-            mcts.runMcts(state);
+        double rand = Math.random();
+        int r = (int) (rand*state.getPickableStartingRegions().size());
+        int regionId = state.getPickableStartingRegions().get(r).getId();
+        Region startingRegion = state.getFullMap().getRegion(regionId);
 
-
-        return null;
+        return startingRegion;
     }
 
     @Override
     public ArrayList<PlaceArmiesMove> getPlaceArmiesMoves(BotState state, Long timeOut) {
+        mcts.runPlaceArmies(state);
         return null;
     }
 
