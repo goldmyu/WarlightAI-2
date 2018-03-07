@@ -20,12 +20,13 @@ public class Region {
 	private SuperRegion superRegion;
 	private int armies;
 	private String playerName;
+
 	
 	public Region(int id, SuperRegion superRegion)
 	{
 		this.id = id;
 		this.superRegion = superRegion;
-		this.neighbors = new LinkedList<Region>();
+		this.neighbors = new LinkedList<>();
 		this.playerName = "unknown";
 		this.armies = 0;
 		

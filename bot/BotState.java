@@ -11,6 +11,8 @@
 package bot;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import map.Map;
 import map.Region;
@@ -37,13 +39,25 @@ public class BotState {
 	private int maxRounds;
 	private int roundNumber;
 
-	private long totalTimebank; //total time that can be in the timebank
+	private long totalTimeBank; //total time that can be in the timebank
 	private long timePerMove; //the amount of time that is added to the timebank per requested move
 	
 	public BotState()
 	{
 		opponentMoves = new ArrayList<>();
 		roundNumber = 0;
+	}
+
+	public BotState(BotState botState){//copy constructor
+		myName = botState.myName;
+		opponentName = botState.opponentName;
+//		fullMap = botState.getFullMap();
+		visibleMap = botState.getVisibleMap().getMapCopy();
+		startingArmies = botState.startingArmies;
+		maxRounds = botState.maxRounds;
+		roundNumber = botState.roundNumber;
+		totalTimeBank = botState.totalTimeBank;
+		timePerMove = botState.timePerMove;
 	}
 	
 	public void updateSettings(String key, String[] parts)
@@ -63,7 +77,7 @@ public class BotState {
 		else if(key.equals("max_rounds"))
 			maxRounds = Integer.parseInt(value);
 		else if(key.equals("timebank"))
-			totalTimebank = Long.parseLong(value);
+			totalTimeBank = Long.parseLong(value);
 		else if(key.equals("time_per_move"))
 			timePerMove = Long.parseLong(value);
 		else if(key.equals("starting_armies")) 
@@ -268,4 +282,13 @@ public class BotState {
 		return wastelands;
 	}
 
+	public List<Region> getMyRegions(){
+		return visibleMap.getRegions().stream().filter(region ->
+		region.getPlayerName().equals(myName)).collect(Collectors.toList());
+	}
+
+	public List<Region> getEnemyRegions() {
+		return visibleMap.getRegions().stream().filter(region ->
+				region.getPlayerName().equals(opponentName)).collect(Collectors.toList());
+	}
 }

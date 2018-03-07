@@ -129,6 +129,6 @@ public class Map {
 			mapString = mapString.concat(region.getId() + ";" + region.getPlayerName() + ";" + region.getArmies() + " ");
 		}
 		return mapString;
-	}	
+	}
 	
 }
