@@ -2,6 +2,7 @@ package mcts;
 
 
 import bot.BotState;
+import map.Map;
 import map.Region;
 import map.SuperRegion;
 
@@ -270,8 +271,52 @@ public class MonteCarloTreeSearch {
         totalSimulationsNum++;
         //TODO - random simulate from a leaf up to a point of win\loss or their approx
 
+        //TODO - this loop runs a limited amount of times
 
+        String gameOutcome = isGameOver(expandedNode);
+        if (gameOutcome.equals("win")) {
+            //TODO - i win - inc statistics
+        } else if (gameOutcome.equals("lose")) {
+            //TODO - i lose - inc statistics
+        } else if (gameOutcome.equals("not_over")) {
+            //TODO - game not over - keep running simulation
+        }
     }
+
+
+    /**
+     * This method checks if the game has ended
+     * it return "win" if i win and "lose" if i lose, "not_over" if game is still running
+     *
+     * @param expandedNode
+     * @return
+     */
+    private String isGameOver(StateNode expandedNode) {
+        BotState botState = expandedNode.getBotState();
+        Map gameMap = botState.getVisibleMap();
+
+        boolean myPlayerHasArmiesOnMap = false;
+        boolean enemyHasArmiesOnMap = false;
+
+        for (Region region : gameMap.getRegions()) {
+            if (region.getPlayerName().equals(botState.getMyPlayerName())) {
+                myPlayerHasArmiesOnMap = true;
+            } else if (region.getPlayerName().equals(botState.getOpponentPlayerName())) {
+                enemyHasArmiesOnMap = true;
+            }
+            if (myPlayerHasArmiesOnMap && enemyHasArmiesOnMap) {
+                break;
+            }
+        }
+
+        if (!myPlayerHasArmiesOnMap) {//i lose
+            return "lose";
+        } else if (!enemyHasArmiesOnMap) {//i win
+            return "win";
+        }
+        return "not_over";
+    }
+
 
     private void executeAllMoveOrders(StateNode newRandStateNode) {
         //first choose randomly who will be the first to move
@@ -302,7 +347,6 @@ public class MonteCarloTreeSearch {
             executeMoveOrder((MoveOrder) movesIterator.next());
         }
     }
-
 
     private void executeMoveOrder(MoveOrder moveOrderToExec) {
         Region fromRegion = moveOrderToExec.getFromRegion();
@@ -339,7 +383,6 @@ public class MonteCarloTreeSearch {
             defendingRegion.setArmies((int) remainingDefendingArmies);
         }
     }
-
 
     private void backPropagate(StateNode expandedNode) {
         //TODO - check this logic
