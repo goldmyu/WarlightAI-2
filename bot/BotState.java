@@ -51,14 +51,16 @@ public class BotState {
 	public BotState(BotState botState){//copy constructor
 		myName = botState.myName;
 		opponentName = botState.opponentName;
-//		fullMap = botState.getFullMap();
-		visibleMap = botState.getVisibleMap().getMapCopy();
-		startingArmies = botState.startingArmies;
-		maxRounds = botState.maxRounds;
-		roundNumber = botState.roundNumber;
-		totalTimeBank = botState.totalTimeBank;
-		timePerMove = botState.timePerMove;
-	}
+
+        //TODO - do we need this??!?		fullMap = botState.getFullMap();
+        visibleMap = botState.getVisibleMap().getMapCopy();
+
+        startingArmies = botState.startingArmies;
+        maxRounds = botState.maxRounds;
+        roundNumber = botState.roundNumber;
+        totalTimeBank = botState.totalTimeBank;
+        timePerMove = botState.timePerMove;
+    }
 	
 	public void updateSettings(String key, String[] parts)
 	{
