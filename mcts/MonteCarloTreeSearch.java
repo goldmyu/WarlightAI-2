@@ -14,35 +14,28 @@ import java.util.stream.Collectors;
 public class MonteCarloTreeSearch {
 
     private StateTree stateTree;
-    private BotState currentState;
     private int totalSimulationsNum;
     private final static int maxTreeLayerWidth = 20;
-    private ArrayList<MoveOrder> myMoves;
-    private ArrayList<MoveOrder> enemyMoves;
 
 
     public void runPlaceArmies(BotState state) {
-        currentState = state;
-        buildTree();
+        buildTree(state);
         StateNode selectedNode;
         StateNode expandedNode;
 
         while (true) {//TODO - Change to while we have time
             selectedNode = select();
+
             for (int i = 0; i < maxTreeLayerWidth; i++) {
                 expandedNode = expand(selectedNode);
-                executeAllMoveOrders(expandedNode);
-
                 simulate(expandedNode);//TODO
                 backPropagate(expandedNode);//TODO
             }
         }
     }
 
-
-
-    private void buildTree() {
-        stateTree = new StateTree(currentState);
+    private void buildTree(BotState state) {
+        stateTree = new StateTree(state);
     }
 
     private StateNode select() {
@@ -67,37 +60,37 @@ public class MonteCarloTreeSearch {
         return newRandStateNode;
     }
 
-    private StateNode randomizeState(StateNode node) {
-        BotState botState = new BotState(currentState);
+    private StateNode randomizeState(StateNode fatherNode) {
+
+        BotState copiedBotState = new BotState(fatherNode.getBotState());
+        StateNode newRandStateNode = new StateNode(fatherNode, copiedBotState);
 
         //TODO - need to address the fog - only do this if i am one level below root
 
-        placeArmiesRandomly(botState);
+        findPathsToNearestEnemies(copiedBotState.getEnemyRegions(), copiedBotState.getOpponentPlayerName());//this scans for paths from my player to enemy
+        findPathsToNearestEnemies(copiedBotState.getMyRegions(), copiedBotState.getMyPlayerName());//this scans for paths from enemy to my player
 
-        findPathsToNearestEnemies(botState.getEnemyRegions(), botState.getOpponentPlayerName());//this scans for paths from my player to enemy
-        findPathsToNearestEnemies(botState.getMyRegions(), botState.getMyPlayerName());//this scans for paths from enemy to my player
+        placeArmiesRandomly(newRandStateNode);
 
-        createAllMovesOrderRandomly(botState);
+        createAllMovesOrderPseudoRandomly(newRandStateNode);
 
+        executeAllMoveOrders(newRandStateNode);
 
-        //Combine
-        //simulate the combined on botState
-        //create node with botState, return it
-        return new StateNode(node, botState);
+        return newRandStateNode;
     }
 
-    private void createAllMovesOrderRandomly(BotState botState) {
-        myMoves = new ArrayList<>();
-        enemyMoves = new ArrayList<>();
-        List<Region> enemyRegions = botState.getEnemyRegions();
-        List<Region> myRegions = botState.getMyRegions();
+    private void createAllMovesOrderPseudoRandomly(StateNode newRandomStateNode) {
+        ArrayList<MoveOrder> myMoves = newRandomStateNode.getMyMoves();
+        ArrayList<MoveOrder> enemyMoves = newRandomStateNode.getEnemyMoves();
+        List<Region> enemyRegions = newRandomStateNode.getBotState().getEnemyRegions();
+        List<Region> myRegions = newRandomStateNode.getBotState().getMyRegions();
 
         for (Region region : myRegions) {
-            myMoves.addAll(randomizeRegionMoveOrderList(botState, region, botState.getMyPlayerName()));
+            myMoves.addAll(randomizeRegionMoveOrderList(newRandomStateNode.getBotState(), region, newRandomStateNode.getBotState().getMyPlayerName()));
         }
 
         for (Region region : enemyRegions) {
-            enemyMoves.addAll(randomizeRegionMoveOrderList(botState, region, botState.getOpponentPlayerName()));
+            enemyMoves.addAll(randomizeRegionMoveOrderList(newRandomStateNode.getBotState(), region, newRandomStateNode.getBotState().getOpponentPlayerName()));
         }
     }
 
@@ -187,7 +180,7 @@ public class MonteCarloTreeSearch {
     }
 
     private void setCloseToOtherPlayer(Region neighbor, String otherPlayerName, Region region) {
-        if (otherPlayerName.equals(currentState.getOpponentPlayerName())) {
+        if (otherPlayerName.equals(stateTree.getRootNode().getBotState().getOpponentPlayerName())) {
             neighbor.setRegionCloseToEnemy(region);
         } else {
             neighbor.setRegionCloseToMe(region);
@@ -195,16 +188,16 @@ public class MonteCarloTreeSearch {
     }
 
     private Region getRegionCloseToOtherPlayer(Region neighbor, String otherPlayerName) {
-        if (otherPlayerName.equals(currentState.getOpponentPlayerName())) {
+        if (otherPlayerName.equals(stateTree.getRootNode().getBotState().getOpponentPlayerName())) {
             return neighbor.getRegionCloseToEnemy();
         } else {
             return neighbor.getRegionCloseToMe();
         }
     }
 
-    private void placeArmiesRandomly(BotState botState) {
-        placeMyArmies(botState);
-        placeEnemyArmiesRandomly(botState);
+    private void placeArmiesRandomly(StateNode newRandStateNode) {
+        placeMyArmies(newRandStateNode);
+        placeEnemyArmiesRandomly(newRandStateNode);
     }
 
     private boolean isAllNeighborsMine(Region randomRegion, String playerName) {
@@ -225,36 +218,51 @@ public class MonteCarloTreeSearch {
         return enemyIncome;
     }
 
-    private void placeMyArmies(BotState botState) {
+    private void placeMyArmies(StateNode newRandStateNode) {
+        BotState botState = newRandStateNode.getBotState();
         List<Region> myRegions = botState.getMyRegions();
         int armiesPlaced = 0;
+
+
         while (armiesPlaced < botState.getStartingArmies()) {
-            int randomRegionIndex = getRandomNumberInRange(myRegions.size());
-            Region randomRegion = myRegions.get(randomRegionIndex);
-            if (isAllNeighborsMine(randomRegion, botState.getOpponentPlayerName())) {
-                continue;
-            }
+            Region randomRegion = myRegions.get(getRandomNumberInRange(myRegions.size()));
+
+            if (isAllNeighborsMine(randomRegion, botState.getMyPlayerName())) continue;
+
             int armiesToPlace = getRandomNumberInRange(botState.getStartingArmies() - armiesPlaced);
-            botState.getVisibleMap().getRegion(randomRegion.getId()).setArmies(randomRegion.getArmies() + armiesToPlace);
-            armiesPlaced = armiesPlaced + armiesToPlace;
+            randomRegion.setArmies(randomRegion.getArmies() + armiesToPlace);
+            armiesPlaced += armiesToPlace;
+
+            PlaceArmiesOrder placeArmiesOrder = new PlaceArmiesOrder();
+            placeArmiesOrder.setPlayerName(botState.getMyPlayerName());
+            placeArmiesOrder.setAmountOfArmiesPlaced(armiesToPlace);
+            placeArmiesOrder.setRegionToPlaceOn(randomRegion);
+            newRandStateNode.addMyPlacedArmiesOrder(placeArmiesOrder);
         }
     }
 
-    private void placeEnemyArmiesRandomly(BotState botState) {
+    private void placeEnemyArmiesRandomly(StateNode newRandStateNode) {
+        BotState botState = newRandStateNode.getBotState();
         int enemyIncome = calcEnemyArmiesIncome(botState);
         List<Region> enemyRegions = botState.getEnemyRegions();
 
         int armiesPlaced = 0;
         while (armiesPlaced < enemyIncome) {
-            int index = getRandomNumberInRange(enemyRegions.size());
-            Region randomRegion = enemyRegions.get(index);
+            Region randomRegion = enemyRegions.get(getRandomNumberInRange(enemyRegions.size()));
+
             if (isAllNeighborsMine(randomRegion, botState.getOpponentPlayerName())) {
                 continue;
             }
 
             int armiesToPlace = getRandomNumberInRange(enemyIncome - armiesPlaced);
-            botState.getVisibleMap().getRegion(randomRegion.getId()).setArmies(randomRegion.getArmies() + armiesToPlace);
-            armiesPlaced = armiesPlaced + armiesToPlace;
+            randomRegion.setArmies(randomRegion.getArmies() + armiesToPlace);
+            armiesPlaced += armiesToPlace;
+
+            PlaceArmiesOrder placeArmiesOrder = new PlaceArmiesOrder();
+            placeArmiesOrder.setPlayerName(botState.getOpponentPlayerName());
+            placeArmiesOrder.setAmountOfArmiesPlaced(armiesToPlace);
+            placeArmiesOrder.setRegionToPlaceOn(randomRegion);
+            newRandStateNode.addEnemyPlacedArmiesOrder(placeArmiesOrder);
         }
     }
 
@@ -265,27 +273,36 @@ public class MonteCarloTreeSearch {
 
     }
 
-    private void executeAllMoveOrders(StateNode expandedNode) {
-        //TODO - take new botState and execute the moveOrder we created
+    private void executeAllMoveOrders(StateNode newRandStateNode) {
         //first choose randomly who will be the first to move
-        if (getRandomNumberInRange(2) == 1) {//myPlayer is first
 
-            int myMovesIterator = 0;
-            int enemyMovesIterator = 0;
-            int totalNumOfMovesLeft = myMoves.size() + enemyMoves.size();
+        ArrayList<MoveOrder> myMoves = newRandStateNode.getMyMoves();
+        ArrayList<MoveOrder> enemyMoves = newRandStateNode.getEnemyMoves();
 
-            while (totalNumOfMovesLeft > 0) {
-                if (myMovesIterator < myMoves.size()) {
-                    executeMoveOrder(myMoves.get(myMovesIterator));
-                    myMovesIterator++;
-                }
-                if (enemyMovesIterator < enemyMoves.size()) {
-                    executeMoveOrder(enemyMoves.get(enemyMovesIterator));
-                    enemyMovesIterator++;
-                }
+        boolean myPlayerGoesFirst = getRandomNumberInRange(2) == 1;//myPlayer is first
+
+        Iterator myMovesIterator = myMoves.iterator();
+        Iterator enemyMovesIterator = enemyMoves.iterator();
+        int totalNumOfMovesLeft = myMoves.size() + enemyMoves.size();
+
+        while (totalNumOfMovesLeft > 0) {
+            if (myPlayerGoesFirst) {
+                doMoveAndIterate(myMovesIterator);
+                doMoveAndIterate(enemyMovesIterator);
+            } else {
+                doMoveAndIterate(enemyMovesIterator);
+                doMoveAndIterate(myMovesIterator);
             }
+            totalNumOfMovesLeft--;
         }
     }
+
+    private void doMoveAndIterate(Iterator movesIterator) {
+        if (movesIterator.hasNext()) {
+            executeMoveOrder((MoveOrder) movesIterator.next());
+        }
+    }
+
 
     private void executeMoveOrder(MoveOrder moveOrderToExec) {
         Region fromRegion = moveOrderToExec.getFromRegion();
@@ -325,6 +342,7 @@ public class MonteCarloTreeSearch {
 
 
     private void backPropagate(StateNode expandedNode) {
+        //TODO - check this logic
         boolean simulateWon = expandedNode.isSimulateWon();
         StateNode iterateNode = expandedNode;
 
