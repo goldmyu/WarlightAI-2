@@ -20,15 +20,25 @@ public class Region {
 	private SuperRegion superRegion;
 	private int armies;
 	private String playerName;
+    private Region regionCloseToEnemy;
+    private Region regionCloseToMe;
 
-	
-	public Region(int id, SuperRegion superRegion)
+    public Region getRegionCloseToEnemy() {
+        return regionCloseToEnemy;
+    }
+
+    public Region getRegionCloseToMe() {
+        return regionCloseToMe;
+    }
+
+    public Region(int id, SuperRegion superRegion)
 	{
 		this.id = id;
 		this.superRegion = superRegion;
 		this.neighbors = new LinkedList<>();
 		this.playerName = "unknown";
 		this.armies = 0;
+        regionCloseToEnemy = null;
 		
 		superRegion.addSubRegion(this);
 	}
@@ -124,4 +134,12 @@ public class Region {
 			return playerName;
 	}
 
+
+    public void setRegionCloseToMe(Region regionCloseToMe) {
+        this.regionCloseToMe = regionCloseToMe;
+    }
+
+    public void setRegionCloseToEnemy(Region regionCloseToEnemy) {
+        this.regionCloseToEnemy = regionCloseToEnemy;
+    }
 }
