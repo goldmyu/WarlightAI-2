@@ -17,22 +17,53 @@ public class MonteCarloTreeSearch {
     private StateTree stateTree;
     private int totalSimulationsNum;
     private final static int maxTreeLayerWidth = 20;
+    private final static String GAME_NOT_OVER = "not_over";
+    private final static String GAME_WIN = "win";
+    private final static String GAME_LOSE = "lose";
+    private final static int MAX_ITERATION_PER_SIMULATION = 20;
+    private static long START_OF_THE_ROUND_TIME;
 
 
     public void runPlaceArmies(BotState state) {
+        START_OF_THE_ROUND_TIME = new Date().getTime();
+
         buildTree(state);
         StateNode selectedNode;
         StateNode expandedNode;
 
-        while (true) {//TODO - Change to while we have time
+        while (isEnoughTime()) {
             selectedNode = select();
 
             for (int i = 0; i < maxTreeLayerWidth; i++) {
                 expandedNode = expand(selectedNode);
-                simulate(expandedNode);//TODO
-                backPropagate(expandedNode);//TODO
+                selectedNode.getSonsNodes().add(expandedNode);
+
+                if (isEnoughTime()) {
+
+                }
+
+                StateNode endOfSimulateNode = simulate(expandedNode, 0);
+                updateSimulationResult(expandedNode, endOfSimulateNode);
+
+                backPropagate(expandedNode);
             }
         }
+    }
+
+    private void updateSimulationResult(StateNode expandedNode, StateNode endOfSimulateNode) {
+        totalSimulationsNum++;
+
+        if (endOfSimulateNode != expandedNode) {
+            if (endOfSimulateNode.isSimulateWon()) {
+                expandedNode.setSimulateWon();
+            }
+            expandedNode.updateScore(endOfSimulateNode.isSimulateWon());
+        }
+    }
+
+    private boolean isEnoughTime() {
+        long currentTime = new Date().getTime();
+        return currentTime - START_OF_THE_ROUND_TIME < 950;
     }
 
     private void buildTree(BotState state) {
@@ -55,13 +86,7 @@ public class MonteCarloTreeSearch {
         }
     }
 
-    private StateNode expand(StateNode selectedNode) {
-        StateNode newRandStateNode = randomizeState(selectedNode);
-        selectedNode.getSonsNodes().add(newRandStateNode);
-        return newRandStateNode;
-    }
-
-    private StateNode randomizeState(StateNode fatherNode) {
+    private StateNode expand(StateNode fatherNode) {
 
         BotState copiedBotState = new BotState(fatherNode.getBotState());
         StateNode newRandStateNode = new StateNode(fatherNode, copiedBotState);
@@ -267,22 +292,38 @@ public class MonteCarloTreeSearch {
         }
     }
 
-    private void simulate(StateNode expandedNode) {
-        totalSimulationsNum++;
-        //TODO - random simulate from a leaf up to a point of win\loss or their approx
-
-        //TODO - this loop runs a limited amount of times
-
+    /**
+     * random simulate from a leaf up to a point of win\loss or their approx
+     *
+     * @param expandedNode
+     * @param numOfIterations
+     */
+    private StateNode simulate(StateNode expandedNode, int numOfIterations) {
         String gameOutcome = isGameOver(expandedNode);
-        if (gameOutcome.equals("win")) {
-            //TODO - i win - inc statistics
-        } else if (gameOutcome.equals("lose")) {
-            //TODO - i lose - inc statistics
-        } else if (gameOutcome.equals("not_over")) {
-            //TODO - game not over - keep running simulation
+
+        if (gameOutcome.equals(GAME_WIN)) {
+            expandedNode.setSimulateWon();
+            expandedNode.updateScore(true);
+
+        } else if (gameOutcome.equals(GAME_LOSE)) {
+            expandedNode.updateScore(false);
+
+        } else { //GAME NOT OVER
+            if (numOfIterations >= MAX_ITERATION_PER_SIMULATION) {
+                evaluateNode(expandedNode);
+            } else {
+                numOfIterations++;
+                StateNode newRandStateNode = expand(expandedNode);
+                return simulate(newRandStateNode, numOfIterations);
+            }
         }
+        return expandedNode;
     }
 
+
+    private void evaluateNode(StateNode expandedNode) {
+        //TODO - evaluate node to determine win or lose and cut the loop
+    }
 
     /**
      * This method checks if the game has ended
@@ -316,7 +357,6 @@ public class MonteCarloTreeSearch {
         }
         return "not_over";
     }
-
 
     private void executeAllMoveOrders(StateNode newRandStateNode) {
         //first choose randomly who will be the first to move
@@ -385,11 +425,10 @@ public class MonteCarloTreeSearch {
     }
 
     private void backPropagate(StateNode expandedNode) {
-        //TODO - check this logic
         boolean simulateWon = expandedNode.isSimulateWon();
-        StateNode iterateNode = expandedNode;
+        StateNode iterateNode = expandedNode.getFatherNode();
 
-        while (iterateNode.getFatherNode() != null) {
+        while (iterateNode != null) {
             iterateNode.updateScore(simulateWon);
             iterateNode = iterateNode.getFatherNode();
         }

@@ -61,6 +61,10 @@ public class StateNode {
         return simulateWon;
     }
 
+    public void setSimulateWon(){
+        simulateWon = true;
+    }
+
     public int getNumOfWins() {
         return numOfWins;
     }
@@ -74,10 +78,9 @@ public class StateNode {
     }
 
 
-
-    public void updateScore(boolean simulateWon){
+    public void updateScore(boolean didWin){
         numOfRuns++;
-        if(simulateWon) numOfWins++;
+        if(didWin) numOfWins++;
     }
     
     public void addMyPlacedArmiesOrder(PlaceArmiesOrder myPlaceArmiesOrder){
